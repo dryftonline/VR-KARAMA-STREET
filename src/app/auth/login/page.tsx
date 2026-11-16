@@ -91,9 +91,13 @@ export default function LoginPage() {
       <div className="w-full max-w-md relative z-10 space-y-6">
         {/* Branding Header */}
         <div className="text-center space-y-2">
-          {/* Purple Ribbon Icon (Matches Finnova logo in reference) */}
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#6366F1] via-[#818CF8] to-[#C084FC] shadow-lg shadow-indigo-500/25 mb-1 text-white">
-            <span className="text-xl font-black tracking-tighter">VR</span>
+          {/* Official VR Street Karama Neon Goggles Logo */}
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#080B18] border border-slate-700/60 shadow-xl shadow-cyan-500/15 mb-2 p-1.5 overflow-hidden">
+            <img
+              src="/logo.png"
+              alt="VR Street Karama Logo"
+              className="w-full h-full object-contain"
+            />
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
             VR STREET <span className="text-[#5850EC]">KARAMA</span>

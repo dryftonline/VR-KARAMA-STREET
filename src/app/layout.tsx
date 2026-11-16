@@ -17,13 +17,13 @@ export const metadata: Metadata = {
     title: "VR Karama",
   },
   icons: {
-    icon: "/icons/icon-192x192.png",
-    apple: "/icons/icon-192x192.png",
+    icon: "/logo.png",
+    apple: "/logo.png",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0D1322",
+  themeColor: "#5850EC",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -36,8 +36,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} bg-navy-950 text-slate-100 antialiased selection:bg-gold/30 selection:text-gold-200`}>
+    <html lang="en">
+      <body className={`${inter.className} bg-[#F4F5F9] text-slate-900 antialiased selection:bg-indigo-500 selection:text-white`}>
         <ToastProvider>
           {children}
           <PwaRegister />

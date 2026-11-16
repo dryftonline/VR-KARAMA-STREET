@@ -92,9 +92,13 @@ export function Navbar({
             href={profile?.role === "OWNER" ? "/dashboard/owner" : "/dashboard/staff"}
             className="flex items-center gap-3 group"
           >
-            {/* Purple Ribbon Icon (Matches Finnova logo in reference) */}
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#6366F1] via-[#818CF8] to-[#C084FC] flex items-center justify-center text-white shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-              <span className="font-black text-lg tracking-tighter">VR</span>
+            {/* Official VR Street Karama Neon Goggles Logo */}
+            <div className="w-10 h-10 rounded-2xl bg-[#080B18] border border-slate-700/60 flex items-center justify-center shadow-md shadow-cyan-500/10 group-hover:scale-105 transition-transform p-1 overflow-hidden">
+              <img
+                src="/logo.png"
+                alt="VR Street Karama Logo"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <div className="text-base font-black tracking-tight text-slate-900 leading-tight">
