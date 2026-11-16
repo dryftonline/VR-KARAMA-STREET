@@ -29,7 +29,10 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { saleId, amount, paymentMethod, reason } = body;
+    const saleId = body.saleId;
+    const reason = body.reason;
+    const rawAmount = body.amount !== undefined ? body.amount : body.newAmount;
+    const rawPaymentMethod = body.paymentMethod !== undefined ? body.paymentMethod : body.newPaymentMethod;
 
     if (!saleId || !reason || String(reason).trim().length < 5) {
       return NextResponse.json(
@@ -53,18 +56,18 @@ export async function POST(request: Request) {
 
     const updates: Record<string, any> = {};
 
-    if (amount !== undefined) {
-      if (!isValidMonetaryAmount(amount)) {
+    if (rawAmount !== undefined && rawAmount !== null) {
+      if (!isValidMonetaryAmount(rawAmount)) {
         return NextResponse.json({ error: "Invalid amount value." }, { status: 400 });
       }
-      updates.amount = parseFloat(parseFloat(amount).toFixed(2));
+      updates.amount = parseFloat(parseFloat(rawAmount.toString()).toFixed(2));
     }
 
-    if (paymentMethod !== undefined) {
-      if (paymentMethod !== "CASH" && paymentMethod !== "UPI") {
+    if (rawPaymentMethod !== undefined && rawPaymentMethod !== null) {
+      if (rawPaymentMethod !== "CASH" && rawPaymentMethod !== "UPI") {
         return NextResponse.json({ error: "Invalid payment method." }, { status: 400 });
       }
-      updates.payment_method = paymentMethod;
+      updates.payment_method = rawPaymentMethod;
     }
 
     if (Object.keys(updates).length === 0) {

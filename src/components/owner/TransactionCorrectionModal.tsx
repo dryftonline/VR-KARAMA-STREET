@@ -61,7 +61,9 @@ export function TransactionCorrectionModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           saleId: sale.id,
+          amount: numAmount,
           newAmount: numAmount,
+          paymentMethod: newPaymentMethod,
           newPaymentMethod,
           reason: reason.trim(),
         }),
