@@ -40,7 +40,12 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ staff: staffList || [] });
+    const formattedStaff = (staffList || []).map((m) => ({
+      ...m,
+      username: m.email ? m.email.split("@")[0] : null,
+    }));
+
+    return NextResponse.json({ staff: formattedStaff });
   } catch (error: any) {
     console.error("Error in /api/staff/list:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

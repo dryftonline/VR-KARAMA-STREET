@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Lock, Mail, ShieldAlert, Sparkles, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Lock, User, ShieldAlert, Sparkles, KeyRound } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
@@ -11,7 +11,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { error: toastError, success: toastSuccess } = useToast();
 
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -21,23 +21,37 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMessage("");
 
-    if (!email || !password) {
-      setErrorMessage("Please enter both email and password.");
+    const cleanUsername = username.trim().toLowerCase();
+    if (!cleanUsername || !password) {
+      setErrorMessage("Please enter both username and password.");
       return;
     }
 
     try {
       setIsLoading(true);
-      const supabase = getSupabaseBrowserClient();
 
+      // 1. Resolve username to authentication credential
+      const resolveRes = await fetch("/api/auth/resolve-username", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: cleanUsername }),
+      });
+
+      const resolveData = await resolveRes.json();
+      if (!resolveRes.ok || !resolveData.email) {
+        throw new Error("Invalid username or password.");
+      }
+
+      // 2. Authenticate against Supabase Auth via browser client (sets session cookies)
+      const supabase = getSupabaseBrowserClient();
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: resolveData.email,
         password: password,
       });
 
       if (error) {
-        setErrorMessage(error.message);
-        toastError(error.message, "Sign In Failed");
+        setErrorMessage("Invalid username or password. Please check your credentials.");
+        toastError("Invalid username or password", "Sign In Failed");
         return;
       }
 
@@ -55,7 +69,7 @@ export default function LoginPage() {
           return;
         }
 
-        toastSuccess(`Welcome back, ${profile?.full_name || "User"}!`, "Authentication Successful");
+        toastSuccess(`Welcome back, ${profile?.full_name || "User"}!`, "Signed In");
 
         if (profile?.role === "OWNER") {
           router.push("/dashboard/owner");
@@ -72,12 +86,9 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickFill = (role: "owner" | "staff") => {
+  const handleQuickFill = (role: "owner") => {
     if (role === "owner") {
-      setEmail("owner@vrstreetkarama.com");
-      setPassword("Karama@2026!");
-    } else {
-      setEmail("staff@vrstreetkarama.com");
+      setUsername("owner");
       setPassword("Karama@2026!");
     }
   };
@@ -112,7 +123,7 @@ export default function LoginPage() {
           <div className="border-b border-slate-100 pb-3">
             <h2 className="text-base font-bold text-slate-900">Sign In to Your Account</h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Owner and Staff authentication portal
+              Enter your username and password to access the portal
             </p>
           </div>
 
@@ -126,19 +137,19 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Email Address
+                Username
               </label>
               <div className="relative">
                 <Input
-                  type="email"
+                  type="text"
                   required
-                  autoComplete="email"
-                  placeholder="name@vrstreetkarama.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 bg-slate-50 border-slate-200 text-slate-900 focus:bg-white"
+                  autoComplete="username"
+                  placeholder="e.g. owner or rahul"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="pl-10 bg-slate-50 border-slate-200 text-slate-900 focus:bg-white font-medium"
                 />
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
+                <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
               </div>
             </div>
 
@@ -176,25 +187,17 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Quick Demo Fill Buttons */}
+          {/* Quick Fill for Owner */}
           <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
-            <span className="text-[11px] text-slate-400">Demo Fill:</span>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => handleQuickFill("owner")}
-                className="px-2.5 py-1 rounded-full bg-indigo-50 text-[#5850EC] text-[11px] font-semibold hover:bg-indigo-100 border border-indigo-100"
-              >
-                Owner
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill("staff")}
-                className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-semibold hover:bg-slate-200 border border-slate-200"
-              >
-                Staff
-              </button>
-            </div>
+            <span className="text-[11px] text-slate-400">Quick Fill:</span>
+            <button
+              type="button"
+              onClick={() => handleQuickFill("owner")}
+              className="px-3 py-1 rounded-full bg-indigo-50 text-[#5850EC] text-[11px] font-semibold hover:bg-indigo-100 border border-indigo-100 flex items-center gap-1.5 transition-colors"
+            >
+              <KeyRound className="w-3 h-3" />
+              <span>Fill Owner Credentials</span>
+            </button>
           </div>
         </div>
 

@@ -28,7 +28,13 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json({ user, profile });
+    return NextResponse.json({
+      user,
+      profile: {
+        ...profile,
+        username: profile.email ? profile.email.split("@")[0] : null,
+      },
+    });
   } catch (error: any) {
     console.error("Error in /api/auth/me:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

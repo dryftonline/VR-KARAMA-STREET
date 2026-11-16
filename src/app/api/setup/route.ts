@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       .eq("role", "OWNER");
 
     const body = await request.json().catch(() => ({}));
-    const { email, password, fullName, secretKey } = body;
+    const { username, email, password, fullName, secretKey } = body;
 
     // If an owner already exists, require the SUPABASE_SERVICE_ROLE_KEY as a secret
     if (ownerCount && ownerCount > 0) {
@@ -29,7 +29,8 @@ export async function POST(request: Request) {
       }
     }
 
-    const ownerEmail = email || "owner@vrstreetkarama.com";
+    const cleanUsername = String(username || "owner").trim().toLowerCase().replace(/[^a-z0-9_.-]/g, "");
+    const ownerEmail = email || `${cleanUsername}@vrstreetkarama.com`;
     const ownerPassword = password || "Karama@2026!";
     const ownerName = fullName || "VR Karama Owner";
 

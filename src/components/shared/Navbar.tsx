@@ -181,7 +181,16 @@ export function Navbar({
               <LogOut className="w-4 h-4" />
             </button>
 
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#6366F1] to-[#C084FC] p-0.5 shadow-sm">
+            <div className="hidden sm:flex flex-col text-right leading-tight">
+              <span className="text-xs font-bold text-slate-800 truncate max-w-[110px]">
+                {profile?.full_name || "User"}
+              </span>
+              <span className="text-[10px] font-mono text-[#5850EC] font-semibold">
+                @{profile?.username || (profile?.email ? profile.email.split("@")[0] : "user")}
+              </span>
+            </div>
+
+            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#6366F1] to-[#C084FC] p-0.5 shadow-sm shrink-0">
               <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-slate-800 font-bold text-xs">
                 {profile?.full_name?.charAt(0) || "U"}
               </div>

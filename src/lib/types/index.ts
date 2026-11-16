@@ -5,6 +5,7 @@ export type UserRole = "OWNER" | "STAFF";
 export interface Profile {
   id: string;
   full_name: string;
+  username?: string | null;
   email: string | null;
   role: UserRole;
   is_active: boolean;

@@ -29,30 +29,60 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { email, password, fullName } = body;
+    const fullName = String(body.fullName || "").trim();
+    const rawUsername = String(body.username || body.email || "").trim().toLowerCase();
+    const password = String(body.password || "").trim();
 
-    if (!email || !password || !fullName) {
+    if (!fullName || !rawUsername || !password) {
       return NextResponse.json(
-        { error: "Missing required fields: email, password, fullName" },
+        { error: "Missing required fields: fullName, username, and password are required." },
+        { status: 400 }
+      );
+    }
+
+    // Format clean username
+    const cleanUsername = rawUsername.includes("@")
+      ? rawUsername.split("@")[0].replace(/[^a-z0-9_.-]/g, "")
+      : rawUsername.replace(/[^a-z0-9_.-]/g, "");
+
+    if (cleanUsername.length < 3) {
+      return NextResponse.json(
+        { error: "Username must be at least 3 alphanumeric characters (e.g. rahul, staff1)." },
         { status: 400 }
       );
     }
 
     if (password.length < 6) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters long" },
+        { error: "Password must be at least 6 characters long." },
         { status: 400 }
       );
     }
 
+    const targetEmail = `${cleanUsername}@vrstreetkarama.com`;
     const adminClient = getSupabaseAdminClient();
+
+    // Check if username/email already exists
+    const { data: existingProfile } = await adminClient
+      .from("profiles")
+      .select("id")
+      .eq("email", targetEmail)
+      .maybeSingle();
+
+    if (existingProfile) {
+      return NextResponse.json(
+        { error: `The username "${cleanUsername}" is already taken. Please choose another.` },
+        { status: 400 }
+      );
+    }
 
     // 1. Create user in Supabase Auth via Admin API
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
-      email,
+      email: targetEmail,
       password,
       email_confirm: true,
       user_metadata: {
+        username: cleanUsername,
         full_name: fullName,
         role: "STAFF",
       },
@@ -68,8 +98,8 @@ export async function POST(request: Request) {
     // 2. Insert into profiles table
     const { error: profileError } = await adminClient.from("profiles").upsert({
       id: newUser.user.id,
-      full_name: fullName.trim(),
-      email: email.trim().toLowerCase(),
+      full_name: fullName,
+      email: targetEmail,
       role: "STAFF",
       is_active: true,
       created_at: new Date().toISOString(),
@@ -91,7 +121,7 @@ export async function POST(request: Request) {
       target_type: "STAFF",
       target_id: newUser.user.id,
       details: {
-        staff_email: email,
+        staff_username: cleanUsername,
         staff_name: fullName,
       },
     });
@@ -100,7 +130,7 @@ export async function POST(request: Request) {
       success: true,
       user: {
         id: newUser.user.id,
-        email: newUser.user.email,
+        username: cleanUsername,
         full_name: fullName,
         role: "STAFF",
       },
@@ -110,4 +140,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
   }
 }
-
