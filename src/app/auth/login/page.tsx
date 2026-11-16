@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Lock, User, ShieldAlert, Sparkles, KeyRound } from "lucide-react";
+import { Eye, EyeOff, Lock, User, ShieldAlert, Sparkles } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
@@ -83,13 +83,6 @@ export default function LoginPage() {
       setErrorMessage(err.message || "An unexpected error occurred.");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleQuickFill = (role: "owner") => {
-    if (role === "owner") {
-      setUsername("owner");
-      setPassword("Karama@2026!");
     }
   };
 
@@ -186,19 +179,6 @@ export default function LoginPage() {
               {isLoading ? "Signing In..." : "Sign In to System"}
             </button>
           </form>
-
-          {/* Quick Fill for Owner */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
-            <span className="text-[11px] text-slate-400">Quick Fill:</span>
-            <button
-              type="button"
-              onClick={() => handleQuickFill("owner")}
-              className="px-3 py-1 rounded-full bg-indigo-50 text-[#5850EC] text-[11px] font-semibold hover:bg-indigo-100 border border-indigo-100 flex items-center gap-1.5 transition-colors"
-            >
-              <KeyRound className="w-3 h-3" />
-              <span>Fill Owner Credentials</span>
-            </button>
-          </div>
         </div>
 
         {/* Security badge footer */}
