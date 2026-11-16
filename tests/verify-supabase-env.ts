@@ -30,14 +30,18 @@ if (fs.existsSync(envLocalPath)) {
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
 
 console.log("\n=======================================================");
 console.log(" VR STREET KARAMA - SUPABASE & VERCEL DEPLOYMENT CHECK");
 console.log("=======================================================\n");
 
-console.log(`Supabase URL: ${supabaseUrl || "❌ Missing NEXT_PUBLIC_SUPABASE_URL"}`);
-console.log(`Anon Key:     ${anonKey ? "✅ Present (length: " + anonKey.length + ")" : "❌ Missing NEXT_PUBLIC_SUPABASE_ANON_KEY"}`);
-console.log(`Service Key:  ${serviceKey ? "✅ Present (length: " + serviceKey.length + ")" : "❌ Missing SUPABASE_SERVICE_ROLE_KEY"}`);
+console.log(`Supabase URL:     ${supabaseUrl || "❌ Missing NEXT_PUBLIC_SUPABASE_URL"}`);
+console.log(`Anon Key:         ${anonKey ? "✅ Present (length: " + anonKey.length + ")" : "❌ Missing NEXT_PUBLIC_SUPABASE_ANON_KEY"}`);
+console.log(`Service Key:      ${serviceKey ? "✅ Present (length: " + serviceKey.length + ")" : "❌ Missing SUPABASE_SERVICE_ROLE_KEY"}`);
+console.log(`VAPID Public Key: ${vapidPublicKey ? "✅ Present (length: " + vapidPublicKey.length + ")" : "❌ Missing NEXT_PUBLIC_VAPID_PUBLIC_KEY"}`);
+console.log(`VAPID Private Key:${vapidPrivateKey ? "✅ Present (length: " + vapidPrivateKey.length + ")" : "❌ Missing VAPID_PRIVATE_KEY"}`);
 
 if (!supabaseUrl || !anonKey) {
   console.log("\n⚠️  Please configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file or Vercel Environment Variables.\n");

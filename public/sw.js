@@ -1,8 +1,9 @@
-const CACHE_NAME = "vr-street-karama-v1";
+const CACHE_NAME = "vr-street-karama-v2";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
   "/offline",
+  "/logo.png",
   "/icons/icon-192x192.png",
   "/icons/icon-512x512.png",
 ];
@@ -68,3 +69,66 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
+// ============================================================================
+// BACKGROUND WEB PUSH EVENT LISTENER (Works even when the app is closed!)
+// ============================================================================
+self.addEventListener("push", (event) => {
+  let payload = {
+    title: "VR STREET KARAMA",
+    body: "New sale recorded to the shared ledger.",
+    icon: "/logo.png",
+    badge: "/logo.png",
+    url: "/dashboard/owner",
+  };
+
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      payload = { ...payload, ...data };
+    } catch (e) {
+      payload.body = event.data.text() || payload.body;
+    }
+  }
+
+  const notificationOptions = {
+    body: payload.body,
+    icon: payload.icon || "/logo.png",
+    badge: payload.badge || "/logo.png",
+    data: {
+      url: payload.url || "/dashboard/owner",
+      dateOfArrival: Date.now(),
+    },
+    vibrate: [200, 100, 200, 100, 200],
+    tag: payload.tag || `sale-alert-${Date.now()}`,
+    renotify: true,
+    requireInteraction: true,
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, notificationOptions)
+  );
+});
+
+// ============================================================================
+// NOTIFICATION CLICK EVENT (Focuses or opens the Owner dashboard)
+// ============================================================================
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const targetUrl = event.notification.data?.url || "/dashboard/owner";
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      // If a tab is already open with the dashboard, focus it
+      for (const client of clientList) {
+        if (client.url.includes("/dashboard/owner") && "focus" in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise open a new window/tab
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});

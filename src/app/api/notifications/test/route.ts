@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
-import { sendSalePushNotificationToOwners } from "@/lib/firebase/admin";
+import { sendTestWebPushToOwners } from "@/lib/webpush/server";
 
 export const dynamic = "force-dynamic";
 
@@ -43,29 +43,28 @@ export async function POST() {
         sale_id: latestSale.id,
         owner_id: user.id,
         status: "SENT",
-        error_message: "Test alert dispatched successfully",
+        error_message: "Test background alert dispatched",
       });
     }
 
-    // Also attempt Firebase dispatch if configured
+    // Send Web Push to registered owner devices
+    let pushResult;
     try {
-      if (latestSale) {
-        await sendSalePushNotificationToOwners({
-          saleId: latestSale.id,
-          transactionNumber: latestSale.transaction_number,
-          amount: latestSale.amount,
-          paymentMethod: latestSale.payment_method,
-          staffName: "Test Dispatcher",
-          createdAt: new Date().toISOString(),
-        });
-      }
-    } catch (e) {
-      console.log("Firebase dispatch skipped:", e);
+      pushResult = await sendTestWebPushToOwners(user.id);
+    } catch (e: any) {
+      console.warn("Web push dispatch warning:", e.message);
+      // Even if 0 devices are registered, don't crash, report informative message
+      return NextResponse.json({
+        success: true,
+        message: e.message || "Test alert recorded (no registered devices found)",
+        warning: e.message,
+      });
     }
 
     return NextResponse.json({
       success: true,
-      message: "Test push notification dispatched successfully",
+      message: `Test push notification dispatched successfully to ${pushResult.sentCount} device(s)!`,
+      result: pushResult,
     });
   } catch (error: any) {
     console.error("Error sending test notification:", error);

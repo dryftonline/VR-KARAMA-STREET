@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isValidMonetaryAmount } from "@/lib/utils/currency";
 import { getBusinessDateKolkata } from "@/lib/utils/timezone";
-import { sendSalePushNotificationToOwners } from "@/lib/firebase/admin";
+import { sendSaleWebPushToOwners } from "@/lib/webpush/server";
 
 export async function POST(request: Request) {
   try {
@@ -88,9 +88,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5. Trigger Push Notification to Owners asynchronously in background
-    // (Does not block or fail sale response if push notification delivery encounters issues)
-    sendSalePushNotificationToOwners({
+    // 5. Trigger Web Push Notification to Owners asynchronously in background
+    // (Delivers directly to the device OS even if the app or browser is closed!)
+    sendSaleWebPushToOwners({
       saleId: insertedSale.id,
       transactionNumber: insertedSale.transaction_number,
       amount: insertedSale.amount,
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
       staffName: profile.full_name,
       createdAt: insertedSale.created_at,
     }).catch((notifErr) => {
-      console.error("Background push notification failed:", notifErr);
+      console.error("Background Web Push notification failed:", notifErr);
     });
 
     return NextResponse.json({
