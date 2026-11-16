@@ -1,17 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
-  FileText,
   Zap,
-  Calendar,
-  ShoppingBag,
-  SlidersHorizontal,
   Bell,
-  Settings,
   LogOut,
-  Sparkles,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Profile } from "@/lib/types";
@@ -30,6 +26,30 @@ export function Navbar({
   salesCount = 84,
 }: NavbarProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [currentTab, setCurrentTab] = useState<string>(activeTab);
+
+  useEffect(() => {
+    const tabFromUrl = searchParams?.get("tab");
+    if (tabFromUrl) {
+      setCurrentTab(tabFromUrl);
+    }
+  }, [searchParams]);
+
+  // Listen to cross-component tab change events
+  useEffect(() => {
+    const handleCustomTabChange = (e: any) => {
+      if (e.detail) {
+        setCurrentTab(e.detail);
+      }
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("owner-tab-change", handleCustomTabChange);
+      return () => {
+        window.removeEventListener("owner-tab-change", handleCustomTabChange);
+      };
+    }
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -42,13 +62,25 @@ export function Navbar({
     }
   };
 
+  const handleTabClick = (tabId: string) => {
+    setCurrentTab(tabId);
+    if (onTabChange) {
+      onTabChange(tabId);
+    }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("owner-tab-change", { detail: tabId }));
+    }
+    if (profile?.role === "OWNER") {
+      router.push(`/dashboard/owner?tab=${tabId}`);
+    }
+  };
+
+  // The 4 clean, focused menu tabs requested by user
   const navPills = [
     { id: "overview", label: "+ Overview" },
-    { id: "feed", label: "Live Stream" },
-    { id: "invoices", label: "+ Sales Ledger", activeHighlight: true },
-    { id: "reports", label: "Analytics" },
-    { id: "staff", label: "Staff Roster" },
-    { id: "audit", label: "Audit" },
+    { id: "reports", label: "Reports" },
+    { id: "staff-analysis", label: "Staff Analysis" },
+    { id: "settings", label: "Settings" },
   ];
 
   return (
@@ -80,16 +112,16 @@ export function Navbar({
           </div>
         </div>
 
-        {/* FLOATING DARK PILL NAVIGATION (Center - Exact Finnova match) */}
+        {/* FLOATING DARK PILL NAVIGATION (Center - Exactly matching user request) */}
         {profile?.role === "OWNER" && (
-          <nav className="finnova-nav-pill px-2 py-1.5 flex items-center gap-1 overflow-x-auto no-scrollbar order-3 lg:order-2 w-full lg:w-auto justify-center">
+          <nav className="finnova-nav-pill px-2 py-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar order-3 lg:order-2 w-full lg:w-auto justify-center">
             {navPills.map((p) => {
-              const isSelected = activeTab === p.id;
+              const isSelected = currentTab === p.id;
               return (
                 <button
                   key={p.id}
-                  onClick={() => onTabChange && onTabChange(p.id)}
-                  className={`px-4 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${
+                  onClick={() => handleTabClick(p.id)}
+                  className={`px-4 sm:px-5 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap select-none cursor-pointer active:scale-95 ${
                     isSelected
                       ? "finnova-active-pill"
                       : "text-slate-300 hover:text-white hover:bg-white/10"
@@ -102,61 +134,45 @@ export function Navbar({
           </nav>
         )}
 
-        {/* RIGHT UTILITY ICONS & PROFILE (Exact Finnova match) */}
-        <div className="flex items-center gap-2 order-2 lg:order-3 ml-auto">
-          {/* Action Icons */}
-          <div className="hidden md:flex items-center gap-1.5">
-            <button
-              onClick={() => onTabChange && onTabChange("invoices")}
-              className="finnova-icon-btn w-9 h-9 flex items-center justify-center text-slate-600 hover:text-indigo-600 transition-colors"
-              title="Ledger"
-            >
-              <FileText className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onTabChange && onTabChange("overview")}
-              className="finnova-icon-btn w-9 h-9 flex items-center justify-center text-slate-600 hover:text-indigo-600 transition-colors"
-              title="Quick Sync"
-            >
-              <Zap className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onTabChange && onTabChange("reports")}
-              className="finnova-icon-btn w-9 h-9 flex items-center justify-center text-slate-600 hover:text-indigo-600 transition-colors"
-              title="Calendar"
-            >
-              <Calendar className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onTabChange && onTabChange("staff")}
-              className="finnova-icon-btn w-9 h-9 flex items-center justify-center text-slate-600 hover:text-indigo-600 transition-colors"
-              title="Staff"
-            >
-              <ShoppingBag className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onTabChange && onTabChange("audit")}
-              className="finnova-icon-btn w-9 h-9 flex items-center justify-center text-slate-600 hover:text-indigo-600 transition-colors"
-              title="Filters"
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onTabChange && onTabChange("notifications")}
-              className="finnova-icon-btn w-9 h-9 flex items-center justify-center text-slate-600 hover:text-indigo-600 transition-colors relative"
-              title="Push Alerts"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
-            </button>
-          </div>
+        {/* RIGHT UTILITY ICONS & PROFILE */}
+        <div className="flex items-center gap-2.5 order-2 lg:order-3 ml-auto">
+          {profile?.role === "OWNER" && (
+            <div className="hidden sm:flex items-center gap-1.5">
+              <button
+                onClick={() => handleTabClick("settings")}
+                className="finnova-icon-btn w-9 h-9 flex items-center justify-center text-slate-600 hover:text-[#5850EC] transition-colors"
+                title="Settings"
+              >
+                <SettingsIcon className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(new CustomEvent("refresh-owner-ledger"));
+                  }
+                }}
+                className="finnova-icon-btn w-9 h-9 flex items-center justify-center text-slate-600 hover:text-[#5850EC] transition-colors"
+                title="Quick Sync"
+              >
+                <Zap className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleTabClick("settings")}
+                className="finnova-icon-btn w-9 h-9 flex items-center justify-center text-slate-600 hover:text-[#5850EC] transition-colors relative"
+                title="Push Alerts"
+              >
+                <Bell className="w-4 h-4" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
+              </button>
+            </div>
+          )}
 
-          {/* User Avatar Circle */}
+          {/* User Avatar & Logout */}
           <div className="flex items-center gap-2 pl-1">
             <button
               onClick={handleLogout}
               title="Sign Out"
-              className="finnova-icon-btn w-9 h-9 flex items-center justify-center text-slate-500 hover:text-red-500 transition-colors"
+              className="finnova-icon-btn w-9 h-9 flex items-center justify-center text-slate-500 hover:text-rose-600 transition-colors"
             >
               <LogOut className="w-4 h-4" />
             </button>

@@ -7,33 +7,29 @@ import {
   SlidersHorizontal,
   Plus,
   RefreshCw,
-  Sparkles,
-  Receipt,
-  Users,
-  Shield,
-  Bell,
-  BarChart3,
+  FileSpreadsheet,
+  Download,
   X,
+  FileText,
 } from "lucide-react";
 import { FinnovaKpiCards } from "@/components/owner/finnova/FinnovaKpiCards";
 import { FinnovaMasterLedger } from "@/components/owner/finnova/FinnovaMasterLedger";
 import { SalesReports } from "@/components/owner/SalesReports";
-import { StaffManagement } from "@/components/owner/StaffManagement";
-import { DeviceNotificationManager } from "@/components/owner/DeviceNotificationManager";
+import { StaffAnalysis } from "@/components/owner/StaffAnalysis";
+import { OwnerSettingsView } from "@/components/owner/OwnerSettingsView";
 import { TransactionCorrectionModal } from "@/components/owner/TransactionCorrectionModal";
 import { SaleRecordingSection } from "@/components/staff/SaleRecordingSection";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { getBusinessDateKolkata, formatDateIST, formatTimeIST } from "@/lib/utils/timezone";
+import { getBusinessDateKolkata } from "@/lib/utils/timezone";
 import { Sale, Profile } from "@/lib/types";
 
-type ActiveTab = "overview" | "invoices" | "reports" | "ledger" | "history" | "staff" | "notifications" | "audit";
+type ActiveTab = "overview" | "reports" | "staff-analysis" | "settings";
 
 function OwnerDashboardInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const rawTab = searchParams?.get("tab") || "overview";
-  const activeTab: ActiveTab = rawTab as ActiveTab;
 
+  const [activeTab, setActiveTab] = useState<ActiveTab>("overview");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [summaryData, setSummaryData] = useState<any | null>(null);
   const [initialLiveSales, setInitialLiveSales] = useState<Sale[]>([]);
@@ -45,6 +41,36 @@ function OwnerDashboardInner() {
   const [selectedSaleToCorrect, setSelectedSaleToCorrect] = useState<Sale | null>(null);
   const [isCorrectionModalOpen, setIsCorrectionModalOpen] = useState<boolean>(false);
   const [isRecordModalOpen, setIsRecordModalOpen] = useState<boolean>(false);
+
+  // Sync tab with URL search params
+  useEffect(() => {
+    const tabFromUrl = searchParams?.get("tab");
+    if (tabFromUrl && ["overview", "reports", "staff-analysis", "settings"].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl as ActiveTab);
+    }
+  }, [searchParams]);
+
+  // Listen to custom tab change events from Navbar
+  useEffect(() => {
+    const handleTabChange = (e: any) => {
+      if (e.detail && ["overview", "reports", "staff-analysis", "settings"].includes(e.detail)) {
+        setActiveTab(e.detail as ActiveTab);
+      }
+    };
+
+    const handleRefresh = () => {
+      fetchTodayOverview();
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("owner-tab-change", handleTabChange);
+      window.addEventListener("refresh-owner-ledger", handleRefresh);
+      return () => {
+        window.removeEventListener("owner-tab-change", handleTabChange);
+        window.removeEventListener("refresh-owner-ledger", handleRefresh);
+      };
+    }
+  }, []);
 
   const fetchTodayOverview = useCallback(async () => {
     try {
@@ -64,7 +90,7 @@ function OwnerDashboardInner() {
         setSummaryData(data.summary);
       }
 
-      // 3. Fetch Recent Sales for Live Feed & Finnova Ledger
+      // 3. Fetch Recent Sales
       const salesRes = await fetch(`/api/sales/live?limit=50`);
       if (salesRes.ok) {
         const salesData = await salesRes.json();
@@ -101,7 +127,7 @@ function OwnerDashboardInner() {
   }, [fetchTodayOverview]);
 
   useEffect(() => {
-    if (activeTab === "audit") {
+    if (activeTab === "settings") {
       fetchAuditLogs();
     }
   }, [activeTab]);
@@ -139,11 +165,20 @@ function OwnerDashboardInner() {
 
   const handleCorrectionSuccess = () => {
     fetchTodayOverview();
-    if (activeTab === "audit") fetchAuditLogs();
+    if (activeTab === "settings") fetchAuditLogs();
   };
 
-  const handleTabChange = (newTab: string) => {
+  const switchTab = (newTab: ActiveTab) => {
+    setActiveTab(newTab);
     router.push(`/dashboard/owner?tab=${newTab}`);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("owner-tab-change", { detail: newTab }));
+    }
+  };
+
+  const handleExportCSV = () => {
+    const today = getBusinessDateKolkata();
+    window.open(`/api/reports/export-csv?startDate=${today}&endDate=${today}`, "_blank");
   };
 
   // Derive stats for KPI cards
@@ -156,12 +191,12 @@ function OwnerDashboardInner() {
 
   return (
     <div className="space-y-6 pb-16">
-      {/* 1. FINNOVA PAGE HEADER (Exact match to reference image) */}
+      {/* 1. FINNOVA PAGE HEADER */}
       <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
-        {/* Left: Back Icon Button + Title + Subtitle */}
+        {/* Left: Back Button + Title + Subtitle */}
         <div className="flex items-center gap-3.5">
           <button
-            onClick={() => handleTabChange("overview")}
+            onClick={() => switchTab("overview")}
             className="w-9 h-9 rounded-full bg-white border border-slate-200/90 shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
             title="Back to Overview"
           >
@@ -169,63 +204,55 @@ function OwnerDashboardInner() {
           </button>
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              {activeTab === "reports"
-                ? "Analytics & Reports"
-                : activeTab === "staff"
-                ? "Staff Management"
-                : activeTab === "audit"
-                ? "Immutable Audit Trail"
-                : activeTab === "notifications"
-                ? "Push Alerts & Devices"
-                : "Invoices"}
+              {activeTab === "overview" && "Invoices & Sales"}
+              {activeTab === "reports" && "Financial Reports & Analytics"}
+              {activeTab === "staff-analysis" && "Staff Performance & Analysis"}
+              {activeTab === "settings" && "Settings & Business Profile"}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 font-medium">
-              {activeTab === "reports"
-                ? "Daily, weekly and monthly sales comparisons for Karama outlet."
-                : activeTab === "staff"
-                ? "Manage staff permissions, PINs, and cashier credentials."
-                : activeTab === "audit"
-                ? "Verified tamper-evident security audit logs."
-                : activeTab === "notifications"
-                ? "Manage connected browser devices and instant sale alerts."
-                : "Manage and track all your invoices in one place."}
+              {activeTab === "overview" && "Manage and track all your shop invoices and live transactions in one place."}
+              {activeTab === "reports" && "Revenue comparisons, cash vs UPI collections, daily trends, and CSV exports."}
+              {activeTab === "staff-analysis" && "Individual cashier volume, collection ratios, and staff sales rankings."}
+              {activeTab === "settings" && "Store identity, staff access control, push notifications, and immutable audit logs."}
             </p>
           </div>
         </div>
 
-        {/* Right: Controls + Royal Violet Button (+ Create an invoice / Record Sale) */}
+        {/* Right: Controls & Actions */}
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => fetchTodayOverview()}
             disabled={isLoading}
-            className="w-9 h-9 rounded-xl bg-white border border-slate-200/90 shadow-sm flex items-center justify-center text-slate-600 hover:text-indigo-600 transition-colors"
+            className="w-9 h-9 rounded-xl bg-white border border-slate-200/90 shadow-sm flex items-center justify-center text-slate-600 hover:text-[#5850EC] transition-colors"
             title="Sync Ledger"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
           </button>
 
-          <button
-            onClick={() => handleTabChange("invoices")}
-            className="w-9 h-9 rounded-xl bg-white border border-slate-200/90 shadow-sm flex items-center justify-center text-slate-600 hover:text-indigo-600 transition-colors"
-            title="Filter Settings"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-          </button>
+          {activeTab === "reports" && (
+            <button
+              onClick={handleExportCSV}
+              className="px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 shadow-sm flex items-center gap-1.5 transition-all"
+            >
+              <Download className="w-3.5 h-3.5 text-[#5850EC]" />
+              <span>Export CSV</span>
+            </button>
+          )}
 
           <button
             onClick={() => setIsRecordModalOpen(true)}
             className="px-5 py-2.5 rounded-full bg-[#5850EC] hover:bg-[#4F46E5] text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-md shadow-indigo-500/25 transition-all active:scale-95"
           >
             <Plus className="w-4 h-4" />
-            <span>Create an invoice</span>
+            <span>Record Sale</span>
           </button>
         </div>
       </div>
 
-      {/* 2. MAIN VIEWS */}
+      {/* 2. THE 4 DEDICATED VIEWS */}
 
-      {/* VIEW A: FINNOVA DASHBOARD & MASTER LEDGER (Default & Invoices View) */}
-      {(activeTab === "overview" || activeTab === "invoices" || activeTab === "ledger") && (
+      {/* VIEW 1: OVERVIEW & MASTER LEDGER */}
+      {activeTab === "overview" && (
         <div className="space-y-6">
           {/* 4 White Finnova KPI Cards */}
           <FinnovaKpiCards
@@ -238,7 +265,7 @@ function OwnerDashboardInner() {
             onRecordSaleClick={() => setIsRecordModalOpen(true)}
           />
 
-          {/* Finnova Filter Bar + Master Dark Navy & Royal Violet Split Container */}
+          {/* Filter Bar + Master Dark Navy & Royal Violet Split Container */}
           <FinnovaMasterLedger
             sales={initialLiveSales}
             staffList={staffList}
@@ -248,92 +275,32 @@ function OwnerDashboardInner() {
         </div>
       )}
 
-      {/* VIEW B: ANALYTICS & REPORTS */}
+      {/* VIEW 2: REPORTS & ANALYTICS */}
       {activeTab === "reports" && (
         <div className="space-y-6">
           <SalesReports />
         </div>
       )}
 
-      {/* VIEW C: STAFF MANAGEMENT */}
-      {activeTab === "staff" && (
+      {/* VIEW 3: STAFF ANALYSIS */}
+      {activeTab === "staff-analysis" && (
         <div className="space-y-6">
-          <StaffManagement
+          <StaffAnalysis
             staffList={staffList}
-            onStaffUpdated={fetchTodayOverview}
+            sales={initialLiveSales}
           />
         </div>
       )}
 
-      {/* VIEW D: PUSH NOTIFICATIONS */}
-      {activeTab === "notifications" && (
+      {/* VIEW 4: SETTINGS & BUSINESS CONFIGURATION */}
+      {activeTab === "settings" && (
         <div className="space-y-6">
-          <DeviceNotificationManager />
-        </div>
-      )}
-
-      {/* VIEW E: IMMUTABLE AUDIT TRAIL */}
-      {activeTab === "audit" && (
-        <div className="finnova-card p-6 sm:p-7 space-y-4">
-          <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                Immutable Audit Trail
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Complete cryptographic log of transaction corrections, staff creation, and administrative events.
-              </p>
-            </div>
-            <button
-              onClick={fetchAuditLogs}
-              className="text-xs text-[#5850EC] font-semibold hover:underline flex items-center gap-1"
-            >
-              <RefreshCw className="w-3.5 h-3.5" /> Refresh Logs
-            </button>
-          </div>
-
-          {auditLogs.length === 0 ? (
-            <div className="py-12 text-center text-xs text-slate-400">
-              No audit log entries recorded yet.
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider text-[10px] font-semibold">
-                  <tr>
-                    <th className="py-3 px-4">Timestamp (IST)</th>
-                    <th className="py-3 px-4">Actor</th>
-                    <th className="py-3 px-4">Action</th>
-                    <th className="py-3 px-4">Target</th>
-                    <th className="py-3 px-4">Details</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white font-mono text-[11px]">
-                  {auditLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4 text-slate-500">
-                        {formatTimeIST(log.created_at)} ({formatDateIST(log.created_at)})
-                      </td>
-                      <td className="py-3 px-4 text-slate-900 font-sans font-semibold">
-                        {log.actor_name}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
-                          {log.action}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-slate-600">
-                        {log.target_type}: {log.target_id.slice(0, 8)}...
-                      </td>
-                      <td className="py-3 px-4 text-slate-500 font-mono text-[10px] max-w-xs truncate">
-                        {JSON.stringify(log.details)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <OwnerSettingsView
+            staffList={staffList}
+            auditLogs={auditLogs}
+            onStaffUpdated={fetchTodayOverview}
+            onRefreshAudit={fetchAuditLogs}
+          />
         </div>
       )}
 
@@ -347,7 +314,7 @@ function OwnerDashboardInner() {
 
       {/* OWNER QUICK RECORD SALE MODAL */}
       {isRecordModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl p-6 sm:p-7 max-w-lg w-full space-y-4 relative">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">

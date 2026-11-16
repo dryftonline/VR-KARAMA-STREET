@@ -158,6 +158,7 @@ export async function GET(request: Request) {
       },
       dailyBreakdown,
       staffSummary,
+      staffBreakdown: staffSummary,
     });
   } catch (error: any) {
     console.error("Error generating sales summary:", error);
