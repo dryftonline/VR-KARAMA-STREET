@@ -23,7 +23,7 @@ export function Navbar({
   profile,
   activeTab = "overview",
   onTabChange,
-  salesCount = 84,
+  salesCount,
 }: NavbarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -109,11 +109,6 @@ export function Navbar({
               </div>
             </div>
           </Link>
-
-          {/* Circle Counter Badge */}
-          <div className="hidden sm:flex w-8 h-8 rounded-full bg-white border border-slate-200/80 items-center justify-center text-xs font-bold text-slate-700 shadow-sm">
-            {salesCount}
-          </div>
         </div>
 
         {/* FLOATING DARK PILL NAVIGATION (Center - Exactly matching user request) */}

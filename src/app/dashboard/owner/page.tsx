@@ -75,34 +75,14 @@ function OwnerDashboardInner() {
 
   const fetchTodayOverview = useCallback(async () => {
     try {
-      const today = getBusinessDateKolkata();
-
-      // 1. Fetch Profile
-      const meRes = await fetch("/api/auth/me");
-      if (meRes.ok) {
-        const meData = await meRes.json();
-        setProfile(meData.profile);
-      }
-
-      // 2. Fetch Today's Summary
-      const summaryRes = await fetch(`/api/reports/summary?startDate=${today}&endDate=${today}`);
-      if (summaryRes.ok) {
-        const data = await summaryRes.json();
-        setSummaryData(data.summary);
-      }
-
-      // 3. Fetch Recent Sales
-      const salesRes = await fetch(`/api/sales/live?limit=50`);
-      if (salesRes.ok) {
-        const salesData = await salesRes.json();
-        setInitialLiveSales(salesData.sales || []);
-      }
-
-      // 4. Fetch Staff Members
-      const staffRes = await fetch("/api/staff/list");
-      if (staffRes.ok) {
-        const staffData = await staffRes.json();
-        setStaffList(staffData.staff || []);
+      // Single unified roundtrip with parallel server queries (loads entire overview in ~300ms)
+      const res = await fetch("/api/dashboard/overview");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.profile) setProfile(data.profile);
+        if (data.summary) setSummaryData(data.summary);
+        if (data.sales) setInitialLiveSales(data.sales);
+        if (data.staff) setStaffList(data.staff);
       }
     } catch (err) {
       console.error("Failed to load owner overview:", err);

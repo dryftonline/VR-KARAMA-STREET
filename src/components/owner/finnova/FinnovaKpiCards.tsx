@@ -14,12 +14,12 @@ interface FinnovaKpiCardsProps {
 }
 
 export function FinnovaKpiCards({
-  totalRevenue = 186540,
-  cashSales = 82560,
-  upiSales = 103980,
-  totalTransactions = 84,
-  cashCount = 38,
-  upiCount = 46,
+  totalRevenue = 0,
+  cashSales = 0,
+  upiSales = 0,
+  totalTransactions = 0,
+  cashCount = 0,
+  upiCount = 0,
   onRecordSaleClick,
 }: FinnovaKpiCardsProps) {
   return (
@@ -37,15 +37,15 @@ export function FinnovaKpiCards({
             {formatINR(totalRevenue)}
           </div>
           <div className="text-[11px] font-semibold text-emerald-600 mt-1 flex items-center gap-1">
-            <span>↑ 12.5%</span>
-            <span className="text-slate-400 font-normal">from yesterday</span>
+            <span>{totalTransactions > 0 ? `${totalTransactions} sales recorded` : "Active ledger"}</span>
+            <span className="text-slate-400 font-normal">today</span>
           </div>
         </div>
 
         {/* Decorative mini workspace / desk graphic matching reference */}
         <div className="pt-4 flex items-center gap-3">
           <div className="h-10 w-full rounded-xl bg-gradient-to-r from-slate-50 to-indigo-50/50 border border-slate-100 flex items-center px-3 justify-between text-[11px] text-slate-500">
-            <span>Active Ledger</span>
+            <span>Daily Ledger</span>
             <span className="font-bold text-[#5850EC]">{totalTransactions} Sales</span>
           </div>
         </div>
@@ -64,8 +64,8 @@ export function FinnovaKpiCards({
             {formatINR(cashSales)}
           </div>
           <div className="text-[11px] font-semibold text-emerald-600 mt-1 flex items-center gap-1">
-            <span>↑ 8.2%</span>
-            <span className="text-slate-400 font-normal">from yesterday</span>
+            <span>{cashCount} cash payments</span>
+            <span className="text-slate-400 font-normal">received</span>
           </div>
         </div>
 

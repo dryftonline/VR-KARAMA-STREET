@@ -83,8 +83,8 @@ export function StaffAnalysis({ staffList = [], sales = [] }: StaffAnalysisProps
   }, [startDate, endDate]);
 
   const staffSummary: any[] = reportData?.staffSummary || reportData?.staffBreakdown || [];
-  const totalShopRevenue: number = reportData?.summary?.totalRevenue || 1;
-  const totalShopTx: number = reportData?.summary?.totalTransactions || 1;
+  const totalShopRevenue: number = reportData?.summary?.totalRevenue || 0;
+  const totalShopTx: number = reportData?.summary?.totalTransactions || 0;
 
   // Filter staff by search query
   const filteredStaff = staffSummary.filter((s) => {
@@ -92,9 +92,13 @@ export function StaffAnalysis({ staffList = [], sales = [] }: StaffAnalysisProps
     return s.staff_name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  // Calculate top performers
-  const topPerformer = [...staffSummary].sort((a, b) => b.total_revenue - a.total_revenue)[0] || null;
-  const volumeLeader = [...staffSummary].sort((a, b) => b.total_transactions - a.total_transactions)[0] || null;
+  // Calculate top performers safely without any gimmick fallbacks
+  const topPerformer = staffSummary.length > 0
+    ? [...staffSummary].sort((a, b) => b.total_revenue - a.total_revenue)[0]
+    : null;
+  const volumeLeader = staffSummary.length > 0
+    ? [...staffSummary].sort((a, b) => b.total_transactions - a.total_transactions)[0]
+    : null;
   const avgBasketSize = totalShopTx > 0 ? totalShopRevenue / totalShopTx : 0;
 
   // Currently inspected staff
@@ -145,16 +149,16 @@ export function StaffAnalysis({ staffList = [], sales = [] }: StaffAnalysisProps
           </div>
           <div className="mt-3">
             <div className="text-xl sm:text-2xl font-black text-slate-900">
-              {topPerformer ? topPerformer.staff_name : "Rahul Sharma"}
+              {topPerformer ? topPerformer.staff_name : "—"}
             </div>
             <div className="text-lg font-mono font-bold text-[#5850EC] mt-1">
-              {topPerformer ? formatINR(topPerformer.total_revenue) : formatINR(92450)}
+              {topPerformer ? formatINR(topPerformer.total_revenue) : formatINR(0)}
             </div>
           </div>
-          <div className="text-[11px] text-emerald-600 font-semibold mt-2">
-            {topPerformer
+          <div className="text-[11px] text-slate-500 font-medium mt-2">
+            {topPerformer && totalShopRevenue > 0
               ? `${((topPerformer.total_revenue / totalShopRevenue) * 100).toFixed(1)}% of shop revenue`
-              : "Leading daily revenue"}
+              : "No sales recorded for this period"}
           </div>
         </div>
 
@@ -168,14 +172,14 @@ export function StaffAnalysis({ staffList = [], sales = [] }: StaffAnalysisProps
           </div>
           <div className="mt-3">
             <div className="text-xl sm:text-2xl font-black text-slate-900">
-              {volumeLeader ? volumeLeader.staff_name : "Rahul Sharma"}
+              {volumeLeader ? volumeLeader.staff_name : "—"}
             </div>
             <div className="text-lg font-mono font-bold text-[#5850EC] mt-1">
-              {volumeLeader ? volumeLeader.total_transactions : 42} Sales Logged
+              {volumeLeader ? `${volumeLeader.total_transactions} Sales Logged` : "0 Sales Logged"}
             </div>
           </div>
-          <div className="text-[11px] text-indigo-600 font-semibold mt-2">
-            Fastest turnaround speed
+          <div className="text-[11px] text-slate-500 font-medium mt-2">
+            {volumeLeader ? "Fastest turnaround speed" : "No sales recorded for this period"}
           </div>
         </div>
 
@@ -189,14 +193,14 @@ export function StaffAnalysis({ staffList = [], sales = [] }: StaffAnalysisProps
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-black text-slate-900 font-mono">
-              {formatINR(avgBasketSize || 2220)}
+              {formatINR(avgBasketSize)}
             </div>
             <div className="text-[11px] text-slate-400 mt-1">
               Average per committed customer sale
             </div>
           </div>
           <div className="text-[11px] text-slate-500 font-medium mt-2">
-            Shared Shop Performance
+            {totalShopTx > 0 ? "Shared Shop Performance" : "No sales recorded for this period"}
           </div>
         </div>
       </div>

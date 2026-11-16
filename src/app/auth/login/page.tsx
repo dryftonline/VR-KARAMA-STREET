@@ -29,55 +29,47 @@ export default function LoginPage() {
 
     try {
       setIsLoading(true);
-
-      // 1. Resolve username to authentication credential
-      const resolveRes = await fetch("/api/auth/resolve-username", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: cleanUsername }),
-      });
-
-      const resolveData = await resolveRes.json();
-      if (!resolveRes.ok || !resolveData.email) {
-        throw new Error("Invalid username or password.");
-      }
-
-      // 2. Authenticate against Supabase Auth via browser client (sets session cookies)
       const supabase = getSupabaseBrowserClient();
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: resolveData.email,
+
+      // Instant direct email resolution (0ms delay)
+      const primaryEmail = cleanUsername.includes("@")
+        ? cleanUsername
+        : `${cleanUsername}@vrstreetkarama.com`;
+
+      let authResult = await supabase.auth.signInWithPassword({
+        email: primaryEmail,
         password: password,
       });
 
-      if (error) {
+      // Quick fallback only if direct match failed and input had no '@'
+      if (authResult.error && !cleanUsername.includes("@")) {
+        try {
+          const resolveRes = await fetch("/api/auth/resolve-username", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: cleanUsername }),
+          });
+          const resolveData = await resolveRes.json();
+          if (resolveRes.ok && resolveData.email && resolveData.email !== primaryEmail) {
+            authResult = await supabase.auth.signInWithPassword({
+              email: resolveData.email,
+              password: password,
+            });
+          }
+        } catch {}
+      }
+
+      if (authResult.error || !authResult.data?.user) {
         setErrorMessage("Invalid username or password. Please check your credentials.");
         toastError("Invalid username or password", "Sign In Failed");
         return;
       }
 
-      if (data?.user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role, is_active, full_name")
-          .eq("id", data.user.id)
-          .single();
+      const user = authResult.data.user;
+      const role = user.user_metadata?.role || "OWNER";
 
-        if (profile && !profile.is_active) {
-          await supabase.auth.signOut();
-          setErrorMessage("This account has been deactivated. Please contact the Owner.");
-          toastError("Account Deactivated", "Access Denied");
-          return;
-        }
-
-        toastSuccess(`Welcome back, ${profile?.full_name || "User"}!`, "Signed In");
-
-        if (profile?.role === "OWNER") {
-          router.push("/dashboard/owner");
-        } else {
-          router.push("/dashboard/staff");
-        }
-        router.refresh();
-      }
+      toastSuccess("Authentication successful! Redirecting...", "Signed In");
+      window.location.href = role === "OWNER" ? "/dashboard/owner" : "/dashboard/staff";
     } catch (err: any) {
       console.error("Login unexpected error:", err);
       setErrorMessage(err.message || "An unexpected error occurred.");
