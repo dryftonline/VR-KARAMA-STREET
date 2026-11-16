@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
@@ -14,14 +16,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const adminClient = getSupabaseAdminClient();
+
+    const { data: profile } = await adminClient
       .from("profiles")
       .select("role, is_active")
       .eq("id", user.id)
       .single();
 
     if (!profile || profile.role !== "OWNER" || !profile.is_active) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden: Owner only" }, { status: 403 });
     }
 
     const { deviceId, isActive } = await request.json();
@@ -29,8 +33,6 @@ export async function POST(request: Request) {
     if (!deviceId || typeof isActive !== "boolean") {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
     }
-
-    const adminClient = getSupabaseAdminClient();
 
     const { error } = await adminClient
       .from("notification_devices")
@@ -48,4 +50,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

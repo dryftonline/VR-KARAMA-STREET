@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,9 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const adminClient = getSupabaseAdminClient();
+
+    const { data: profile } = await adminClient
       .from("profiles")
       .select("role, is_active")
       .eq("id", user.id)
@@ -25,7 +28,7 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden: Owner only" }, { status: 403 });
     }
 
-    const { data: devices, error: devError } = await supabase
+    const { data: devices, error: devError } = await adminClient
       .from("notification_devices")
       .select("*")
       .eq("owner_id", user.id)
@@ -35,7 +38,7 @@ export async function GET() {
       return NextResponse.json({ error: devError.message }, { status: 500 });
     }
 
-    const { data: recentLogs } = await supabase
+    const { data: recentLogs } = await adminClient
       .from("notification_logs")
       .select("*")
       .order("sent_at", { ascending: false })

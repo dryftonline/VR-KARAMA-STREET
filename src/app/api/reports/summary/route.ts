@@ -17,7 +17,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const { getSupabaseAdminClient } = await import("@/lib/supabase/admin");
+    const adminClient = getSupabaseAdminClient();
+
+    const { data: profile } = await adminClient
       .from("profiles")
       .select("role, is_active")
       .eq("id", user.id)

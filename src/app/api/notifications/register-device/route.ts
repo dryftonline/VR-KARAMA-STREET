@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
@@ -14,7 +16,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const adminClient = getSupabaseAdminClient();
+
+    const { data: profile } = await adminClient
       .from("profiles")
       .select("role, is_active")
       .eq("id", user.id)
@@ -27,13 +31,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const { token, deviceType, deviceName } = await request.json();
+    const body = await request.json();
+    const token = body.token || body.deviceToken;
+    const deviceType = body.deviceType || "desktop";
+    const deviceName = body.deviceName || "Owner Web Browser";
 
     if (!token) {
       return NextResponse.json({ error: "Missing device token" }, { status: 400 });
     }
-
-    const adminClient = getSupabaseAdminClient();
 
     // Upsert device token
     const { data: device, error: upsertError } = await adminClient
@@ -42,8 +47,8 @@ export async function POST(request: Request) {
         {
           owner_id: user.id,
           device_token: token,
-          device_type: deviceType || "web",
-          device_name: deviceName || "Web Browser",
+          device_type: deviceType,
+          device_name: deviceName,
           is_active: true,
           updated_at: new Date().toISOString(),
         },
@@ -63,4 +68,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

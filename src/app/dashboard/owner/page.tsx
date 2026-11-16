@@ -11,6 +11,7 @@ import {
   Download,
   X,
   FileText,
+  ShieldAlert,
 } from "lucide-react";
 import { FinnovaKpiCards } from "@/components/owner/finnova/FinnovaKpiCards";
 import { FinnovaMasterLedger } from "@/components/owner/finnova/FinnovaMasterLedger";
@@ -132,7 +133,7 @@ function OwnerDashboardInner() {
     }
   }, [activeTab]);
 
-  // Realtime Supabase Channel for instant sales streaming
+  // Realtime Supabase Channel for instant sales streaming & native push alerts
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     const channel = supabase
@@ -140,8 +141,16 @@ function OwnerDashboardInner() {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "sales" },
-        () => {
+        (payload: any) => {
           fetchTodayOverview();
+          const newSale = payload.new;
+          if (newSale && typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+            new Notification("VR Street Karama • Sale Recorded! 💰", {
+              body: `₹${newSale.amount} via ${newSale.payment_method === "CASH" ? "Cash" : "GPay / UPI"} | #${newSale.transaction_number}`,
+              icon: "/logo.png",
+              badge: "/logo.png",
+            });
+          }
         }
       )
       .on(
@@ -188,6 +197,39 @@ function OwnerDashboardInner() {
   const totalCount = summaryData?.totalTransactions ?? (initialLiveSales.length || 84);
   const cashCount = summaryData?.cashCount ?? 38;
   const upiCount = summaryData?.upiCount ?? 46;
+
+  // If logged in as STAFF, show helpful restriction card with 1-click switch
+  if (profile && profile.role !== "OWNER") {
+    return (
+      <div className="p-8 text-center max-w-md mx-auto finnova-card space-y-4 my-12">
+        <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto">
+          <ShieldAlert className="w-6 h-6" />
+        </div>
+        <h2 className="text-lg font-bold text-slate-900">Owner Access Restricted</h2>
+        <p className="text-xs text-slate-500">
+          You are currently signed in as <strong>{profile.full_name} ({profile.email})</strong> with role <strong>{profile.role}</strong>. Reports, staff administration, and push alerts require the Owner account.
+        </p>
+        <div className="flex gap-2 justify-center pt-2">
+          <button
+            onClick={() => router.push("/dashboard/staff")}
+            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700"
+          >
+            Go to Staff Portal
+          </button>
+          <button
+            onClick={async () => {
+              const supabase = getSupabaseBrowserClient();
+              await supabase.auth.signOut();
+              window.location.href = "/auth/login";
+            }}
+            className="px-4 py-2 rounded-full bg-[#5850EC] hover:bg-[#4F46E5] text-xs font-bold text-white shadow-md shadow-indigo-500/25"
+          >
+            Switch to Owner Account
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-16">
