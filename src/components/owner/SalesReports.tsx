@@ -11,9 +11,23 @@ import {
   Legend,
   CartesianGrid,
 } from "recharts";
-import { Calendar, Filter, Users, TrendingUp, PieChart as PieIcon } from "lucide-react";
+import {
+  Calendar,
+  Filter,
+  Users,
+  TrendingUp,
+  PieChart as PieIcon,
+  Receipt,
+  Edit3,
+  Trash2,
+  Banknote,
+  Smartphone,
+} from "lucide-react";
 import { formatINR } from "@/lib/utils/currency";
-import { getBusinessDateKolkata } from "@/lib/utils/timezone";
+import { getBusinessDateKolkata, formatTimeIST, formatDateIST } from "@/lib/utils/timezone";
+import { Sale } from "@/lib/types";
+import { DeleteSaleModal } from "@/components/owner/DeleteSaleModal";
+import { TransactionCorrectionModal } from "@/components/owner/TransactionCorrectionModal";
 
 type PeriodFilter = "today" | "yesterday" | "last7" | "last30" | "custom";
 
@@ -23,6 +37,12 @@ export function SalesReports() {
   const [endDate, setEndDate] = useState<string>(getBusinessDateKolkata());
   const [reportData, setReportData] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Modals for Correcting or Deleting Sales from the Report
+  const [selectedSaleToCorrect, setSelectedSaleToCorrect] = useState<Sale | null>(null);
+  const [selectedSaleToDelete, setSelectedSaleToDelete] = useState<Sale | null>(null);
+  const [isCorrectionModalOpen, setIsCorrectionModalOpen] = useState<boolean>(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
 
   // Compute date ranges when period filter changes
   useEffect(() => {
@@ -70,6 +90,17 @@ export function SalesReports() {
 
   useEffect(() => {
     fetchReports();
+
+    const handleRefresh = () => {
+      fetchReports();
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("refresh-owner-ledger", handleRefresh);
+      return () => {
+        window.removeEventListener("refresh-owner-ledger", handleRefresh);
+      };
+    }
   }, [startDate, endDate]);
 
   const dailyChartData = (reportData?.dailyBreakdown || []).map((d: any) => ({
@@ -83,6 +114,8 @@ export function SalesReports() {
   const cashAmount = reportData?.summary?.cashSales || 0;
   const upiAmount = reportData?.summary?.upiSales || 0;
   const totalAmount = reportData?.summary?.totalRevenue || 0;
+  const totalCount = reportData?.summary?.totalTransactions || 0;
+  const reportSales: Sale[] = reportData?.sales || [];
 
   const cashPercent = totalAmount > 0 ? ((cashAmount / totalAmount) * 100).toFixed(1) : "0.0";
   const upiPercent = totalAmount > 0 ? ((upiAmount / totalAmount) * 100).toFixed(1) : "0.0";
@@ -282,6 +315,129 @@ export function SalesReports() {
           </div>
         )}
       </div>
+
+      {/* DETAILED TRANSACTIONS LIST & ACTION MANAGEMENT */}
+      <div className="finnova-card p-6 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2">
+            <Receipt className="w-4 h-4 text-[#5850EC]" />
+            <div>
+              <h4 className="text-sm font-bold text-slate-900">
+                Detailed Transaction Ledger ({reportSales.length})
+              </h4>
+              <p className="text-[11px] text-slate-500">
+                Correct values or permanently delete accidental sales. Deletions reflect immediately across all cashier terminals.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {reportSales.length === 0 ? (
+          <div className="py-8 text-center text-xs text-slate-400">
+            {isLoading ? "Loading transaction records..." : "No individual sales recorded for this period."}
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider text-[10px] font-semibold">
+                <tr>
+                  <th className="py-3 px-4">Transaction ID</th>
+                  <th className="py-3 px-4">Staff Member</th>
+                  <th className="py-3 px-3 text-center">Method</th>
+                  <th className="py-3 px-4 text-right">Amount</th>
+                  <th className="py-3 px-4">Date &amp; Time</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {reportSales.map((s) => {
+                  const staffName = (s as any).staff_name || s.staff?.full_name || "Staff";
+                  return (
+                    <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-slate-900 text-xs">
+                        #{s.transaction_number}
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-slate-700">
+                        {staffName}
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <span
+                          className={`inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full font-bold ${
+                            s.payment_method === "CASH"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                          }`}
+                        >
+                          {s.payment_method === "CASH" ? (
+                            <Banknote className="w-3 h-3" />
+                          ) : (
+                            <Smartphone className="w-3 h-3" />
+                          )}
+                          {s.payment_method === "CASH" ? "Cash" : "GPay / UPI"}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono font-black text-slate-900 text-sm">
+                        {formatINR(s.amount)}
+                      </td>
+                      <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">
+                        {formatTimeIST(s.created_at)} • {formatDateIST(s.created_at)}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* Correct Button */}
+                          <button
+                            onClick={() => {
+                              setSelectedSaleToCorrect(s);
+                              setIsCorrectionModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-lg text-slate-600 hover:text-[#5850EC] hover:bg-indigo-50 transition-colors"
+                            title="Correct this transaction"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Delete Button */}
+                          <button
+                            onClick={() => {
+                              setSelectedSaleToDelete(s);
+                              setIsDeleteModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors"
+                            title="Delete this transaction"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* MODALS */}
+      <TransactionCorrectionModal
+        isOpen={isCorrectionModalOpen}
+        onClose={() => {
+          setIsCorrectionModalOpen(false);
+          setSelectedSaleToCorrect(null);
+        }}
+        sale={selectedSaleToCorrect}
+        onSuccess={fetchReports}
+      />
+
+      <DeleteSaleModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSelectedSaleToDelete(null);
+        }}
+        sale={selectedSaleToDelete}
+        onSuccess={fetchReports}
+      />
     </div>
   );
 }

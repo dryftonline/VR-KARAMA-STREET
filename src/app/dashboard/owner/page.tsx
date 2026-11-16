@@ -19,6 +19,7 @@ import { SalesReports } from "@/components/owner/SalesReports";
 import { StaffAnalysis } from "@/components/owner/StaffAnalysis";
 import { OwnerSettingsView } from "@/components/owner/OwnerSettingsView";
 import { TransactionCorrectionModal } from "@/components/owner/TransactionCorrectionModal";
+import { DeleteSaleModal } from "@/components/owner/DeleteSaleModal";
 import { SaleRecordingSection } from "@/components/staff/SaleRecordingSection";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getBusinessDateKolkata } from "@/lib/utils/timezone";
@@ -38,9 +39,11 @@ function OwnerDashboardInner() {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Correction & Record Modals
+  // Correction, Deletion & Record Modals
   const [selectedSaleToCorrect, setSelectedSaleToCorrect] = useState<Sale | null>(null);
+  const [selectedSaleToDelete, setSelectedSaleToDelete] = useState<Sale | null>(null);
   const [isCorrectionModalOpen, setIsCorrectionModalOpen] = useState<boolean>(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
   const [isRecordModalOpen, setIsRecordModalOpen] = useState<boolean>(false);
 
   // Sync tab with URL search params
@@ -140,6 +143,13 @@ function OwnerDashboardInner() {
           fetchTodayOverview();
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "sales" },
+        () => {
+          fetchTodayOverview();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -152,7 +162,17 @@ function OwnerDashboardInner() {
     setIsCorrectionModalOpen(true);
   };
 
+  const handleDeleteSale = (sale: Sale) => {
+    setSelectedSaleToDelete(sale);
+    setIsDeleteModalOpen(true);
+  };
+
   const handleCorrectionSuccess = () => {
+    fetchTodayOverview();
+    if (activeTab === "settings") fetchAuditLogs();
+  };
+
+  const handleDeleteSuccess = () => {
     fetchTodayOverview();
     if (activeTab === "settings") fetchAuditLogs();
   };
@@ -292,6 +312,7 @@ function OwnerDashboardInner() {
             sales={initialLiveSales}
             staffList={staffList}
             onCorrectSale={handleCorrectSale}
+            onDeleteSale={handleDeleteSale}
             onRecordSaleClick={() => setIsRecordModalOpen(true)}
           />
         </div>
@@ -332,6 +353,17 @@ function OwnerDashboardInner() {
         onClose={() => setIsCorrectionModalOpen(false)}
         sale={selectedSaleToCorrect}
         onSuccess={handleCorrectionSuccess}
+      />
+
+      {/* TRANSACTION DELETION MODAL */}
+      <DeleteSaleModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSelectedSaleToDelete(null);
+        }}
+        sale={selectedSaleToDelete}
+        onSuccess={handleDeleteSuccess}
       />
 
       {/* OWNER QUICK RECORD SALE MODAL */}

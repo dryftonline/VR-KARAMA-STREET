@@ -148,6 +148,18 @@ export async function GET(request: Request) {
         total_transactions: d.count,
       }));
 
+    const formattedSales = allSales.map((s: any) => ({
+      id: s.id,
+      transaction_number: s.transaction_number,
+      staff_id: s.staff_id,
+      amount: Number(s.amount),
+      payment_method: s.payment_method,
+      business_date: s.business_date,
+      created_at: s.created_at,
+      staff_name: s.profiles?.full_name || "Unknown Staff",
+      staff: s.profiles ? { id: s.profiles.id, full_name: s.profiles.full_name } : undefined,
+    }));
+
     return NextResponse.json({
       summary: {
         startDate,
@@ -162,6 +174,7 @@ export async function GET(request: Request) {
       dailyBreakdown,
       staffSummary,
       staffBreakdown: staffSummary,
+      sales: formattedSales,
     });
   } catch (error: any) {
     console.error("Error generating sales summary:", error);

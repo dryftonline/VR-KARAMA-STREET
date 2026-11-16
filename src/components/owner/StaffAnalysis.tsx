@@ -80,6 +80,17 @@ export function StaffAnalysis({ staffList = [], sales = [] }: StaffAnalysisProps
 
   useEffect(() => {
     fetchStaffData();
+
+    const handleRefresh = () => {
+      fetchStaffData();
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("refresh-owner-ledger", handleRefresh);
+      return () => {
+        window.removeEventListener("refresh-owner-ledger", handleRefresh);
+      };
+    }
   }, [startDate, endDate]);
 
   const staffSummary: any[] = reportData?.staffSummary || reportData?.staffBreakdown || [];

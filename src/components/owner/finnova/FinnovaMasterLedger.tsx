@@ -14,6 +14,7 @@ import {
   Link as LinkIcon,
   Printer,
   Edit3,
+  Trash2,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils/currency";
 import { formatTimeIST, formatDateIST } from "@/lib/utils/timezone";
@@ -23,6 +24,7 @@ interface FinnovaMasterLedgerProps {
   sales: Sale[];
   staffList: Profile[];
   onCorrectSale?: (sale: Sale) => void;
+  onDeleteSale?: (sale: Sale) => void;
   onRecordSaleClick?: () => void;
 }
 
@@ -30,6 +32,7 @@ export function FinnovaMasterLedger({
   sales = [],
   staffList = [],
   onCorrectSale,
+  onDeleteSale,
   onRecordSaleClick,
 }: FinnovaMasterLedgerProps) {
   const [activeFilterTab, setActiveFilterTab] = useState<"ALL" | "CASH" | "UPI">("ALL");
@@ -369,6 +372,17 @@ export function FinnovaMasterLedger({
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                         <span>Correct Sale</span>
+                      </button>
+                    )}
+
+                    {onDeleteSale && (
+                      <button
+                        onClick={() => onDeleteSale(activeSale)}
+                        className="py-2.5 px-3.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/30 text-rose-200 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                        title="Delete this transaction from ledger"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
                       </button>
                     )}
 
